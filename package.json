@@ -1,0 +1,52 @@
+{
+  "name": "reason-react",
+  "version": "0.1.0",
+  "description": "Reason native",
+  "esy": {
+    "build": [["jbuilder", "build", "-x", "ios"]],
+    "install": ["esy-installer"],
+    "buildsInSource": "_build",
+    "sandboxEnv": {
+      "ARCH": "amd64",
+      "SUBARCH": "x86_64",
+      "PLATFORM": "iPhoneSimulator",
+      "SDK": "11.2",
+      "MIN_VER": "11.2"
+    }
+  },
+  "target": {
+    "note": "Temporary place for sandbox env snippets",
+    "simulator": {
+      "sandboxEnv": {
+        "ARCH": "amd64",
+        "SUBARCH": "x86_64",
+        "PLATFORM": "iPhoneSimulator",
+        "SDK": "11.2",
+        "MIN_VER": "11.2"
+      }
+    },
+    "device": {
+      "sandboxEnv": {
+        "ARCH": "arm",
+        "SUBARCH": "armv7s",
+        "PLATFORM": "iPhoneOS",
+        "SDK": "11.2",
+        "MIN_VER": "10"
+      }
+    }
+  },
+  "dependencies": {
+    "@esy-ocaml/esy-installer": "^0.0.0",
+    "@esy-ocaml/reason": "^3.1.0",
+    "@opam/jbuilder": "^1.0.0-beta19",
+    "refmterr": "^3.0.7",
+    "ocaml-ios": "~4.4.0"
+  },
+  "peerDependencies": {
+    "ocaml": "esy-cross/ocaml-ios#4.04.0"
+  },
+  "devDependencies": {
+    "ocaml": "esy-cross/ocaml-ios#4.04.0",
+    "@esy-ocaml/merlin": "^3.0.5"
+  }
+}
