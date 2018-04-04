@@ -310,73 +310,111 @@ let suite =
         let rendered0 =
           RenderedElement.render(<BoxList useDynamicKeys=true rAction />);
         RemoteAction.act(rAction, ~action=BoxList.Create("Hello"));
-        let (rendered1, _) = RenderedElement.flushPendingUpdates(rendered0);
+        let (rendered1, _) as actual1 =
+          RenderedElement.flushPendingUpdates(rendered0);
         RemoteAction.act(rAction, ~action=BoxList.Create("World"));
-        let (rendered2, _) = RenderedElement.flushPendingUpdates(rendered1);
+        let (rendered2, _) as actual2 =
+          RenderedElement.flushPendingUpdates(rendered1);
         RemoteAction.act(rAction, ~action=BoxList.Reverse);
-        let (rendered3, _) = RenderedElement.flushPendingUpdates(rendered2);
+        let (rendered3, _) as actual3 =
+          RenderedElement.flushPendingUpdates(rendered2);
         TestRenderer.convertElement(rendered0)
         |> check(
              renderedElement,
              "Initial BoxList",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree: []
-               }
-             ]
+             [TestComponents.(<BoxList id=1 />)]
            );
-        TestRenderer.convertElement(rendered1)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree: [
-                   TestComponents.(<BoxWithDynamicKeys id=2 state="Hello" />)
-                 ]
-               }
-             ]
-           );
-        TestRenderer.convertElement(rendered2)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree:
-                   TestComponents.[
-                     <BoxWithDynamicKeys id=3 state="World" />,
-                     <BoxWithDynamicKeys id=2 state="Hello" />
-                   ]
-               }
-             ]
-           );
-        TestRenderer.convertElement(rendered3)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree:
-                   TestComponents.[
-                     <BoxWithDynamicKeys id=2 state="Hello" />,
-                     <BoxWithDynamicKeys id=3 state="World" />
-                   ]
-               }
-             ]
-           );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [
+              <BoxList id=1>
+                <BoxWithDynamicKeys id=2 state="Hello" />
+              </BoxList>
+            ],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged:
+                  ReplaceElements(
+                    [],
+                    [<BoxWithDynamicKeys id=2 state="Hello" />]
+                  ),
+                oldInstance: <BoxList id=1 />,
+                newInstance:
+                  <BoxList id=1>
+                    <BoxWithDynamicKeys id=2 state="Hello" />
+                  </BoxList>
+              })
+            ]
+          ),
+          actual1
+        );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [
+              <BoxList id=1>
+                <BoxWithDynamicKeys id=3 state="World" />
+                <BoxWithDynamicKeys id=2 state="Hello" />
+              </BoxList>
+            ],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged:
+                  ReplaceElements(
+                    [<BoxWithDynamicKeys id=2 state="Hello" />],
+                    [
+                      <BoxWithDynamicKeys id=3 state="World" />,
+                      <BoxWithDynamicKeys id=2 state="Hello" />
+                    ]
+                  ),
+                oldInstance:
+                  <BoxList id=1>
+                    <BoxWithDynamicKeys id=2 state="Hello" />
+                  </BoxList>,
+                newInstance:
+                  <BoxList id=1>
+                    <BoxWithDynamicKeys id=3 state="World" />
+                    <BoxWithDynamicKeys id=2 state="Hello" />
+                  </BoxList>
+              })
+            ]
+          ),
+          actual2
+        );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [
+              <BoxList id=1>
+                <BoxWithDynamicKeys id=2 state="Hello" />
+                <BoxWithDynamicKeys id=3 state="World" />
+              </BoxList>
+            ],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged: Nested,
+                oldInstance:
+                  <BoxList id=1>
+                    <BoxWithDynamicKeys id=3 state="World" />
+                    <BoxWithDynamicKeys id=2 state="Hello" />
+                  </BoxList>,
+                newInstance:
+                  <BoxList id=1>
+                    <BoxWithDynamicKeys id=2 state="Hello" />
+                    <BoxWithDynamicKeys id=3 state="World" />
+                  </BoxList>
+              })
+            ]
+          ),
+          actual3
+        );
       }
     ),
     (
@@ -388,71 +426,111 @@ let suite =
         let rAction = RemoteAction.create();
         let rendered0 = RenderedElement.render(<BoxList rAction />);
         RemoteAction.act(rAction, ~action=BoxList.Create("Hello"));
-        let (rendered1, _) = RenderedElement.flushPendingUpdates(rendered0);
+        let (rendered1, _) as actual1 =
+          RenderedElement.flushPendingUpdates(rendered0);
         RemoteAction.act(rAction, ~action=BoxList.Create("World"));
-        let (rendered2, _) = RenderedElement.flushPendingUpdates(rendered1);
+        let (rendered2, _) as actual2 =
+          RenderedElement.flushPendingUpdates(rendered1);
         RemoteAction.act(rAction, ~action=BoxList.Reverse);
-        let (rendered3, _) = RenderedElement.flushPendingUpdates(rendered2);
+        let (rendered3, _) as actual3 =
+          RenderedElement.flushPendingUpdates(rendered2);
         TestRenderer.convertElement(rendered0)
         |> Assert.check(
              renderedElement,
              "Initial BoxList",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree: []
-               }
-             ]
+             [TestComponents.(<BoxList id=1 />)]
            );
-        TestRenderer.convertElement(rendered1)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree: [TestComponents.(<Box id=2 state="Hello" />)]
-               }
-             ]
-           );
-        TestRenderer.convertElement(rendered2)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree:
-                   TestComponents.[
-                     <Box id=3 state="World" />,
-                     <Box id=4 state="Hello" />
-                   ]
-               }
-             ]
-           );
-        TestRenderer.convertElement(rendered3)
-        |> check(
-             renderedElement,
-             "Add Hello then Flush",
-             [
-               {
-                 id: 1,
-                 component: Component(BoxList.component),
-                 state: "",
-                 subtree:
-                   TestComponents.[
-                     <Box id=3 state="Hello" />,
-                     <Box id=4 state="World" />
-                   ]
-               }
-             ]
-           );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [<BoxList id=1> <Box id=2 state="Hello" /> </BoxList>],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged:
+                  ReplaceElements([], [<Box id=2 state="Hello" />]),
+                oldInstance: <BoxList id=1 />,
+                newInstance:
+                  <BoxList id=1> <Box id=2 state="Hello" /> </BoxList>
+              })
+            ]
+          ),
+          actual1
+        );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [
+              <BoxList id=1>
+                <Box id=3 state="World" />
+                <Box id=4 state="Hello" />
+              </BoxList>
+            ],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged:
+                  ReplaceElements(
+                    [<Box id=2 state="Hello" />],
+                    [<Box id=3 state="World" />, <Box id=4 state="Hello" />]
+                  ),
+                oldInstance:
+                  <BoxList id=1> <Box id=2 state="Hello" /> </BoxList>,
+                newInstance:
+                  <BoxList id=1>
+                    <Box id=3 state="World" />
+                    <Box id=4 state="Hello" />
+                  </BoxList>
+              })
+            ]
+          ),
+          actual2
+        );
+        assertUpdate(
+          ~label="Add Hello then Flush",
+          TestComponents.(
+            [
+              <BoxList id=1>
+                <Box id=3 state="Hello" />
+                <Box id=4 state="World" />
+              </BoxList>
+            ],
+            [
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged: NoChange,
+                oldInstance: <Box id=4 state="Hello" />,
+                newInstance: <Box id=4 state="World" />
+              }),
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged: NoChange,
+                oldInstance: <Box id=3 state="World" />,
+                newInstance: <Box id=3 state="Hello" />
+              }),
+              UpdateInstance({
+                componentChanged: false,
+                stateChanged: true,
+                subTreeChanged: Nested,
+                oldInstance:
+                  <BoxList id=1>
+                    <Box id=3 state="World" />
+                    <Box id=4 state="Hello" />
+                  </BoxList>,
+                newInstance:
+                  <BoxList id=1>
+                    <Box id=3 state="Hello" />
+                    <Box id=4 state="World" />
+                  </BoxList>
+              })
+            ]
+          ),
+          actual3
+        );
       }
     ),
     (

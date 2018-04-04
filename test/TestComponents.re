@@ -18,6 +18,16 @@ module BoxWithDynamicKeys = {
     };
 };
 
+module BoxList = {
+  let createElement = (~id, ~state="", ~children, ()) =>
+    TestRenderer.{
+      component: Component(Components.BoxList.component),
+      id,
+      state,
+      subtree: children
+    };
+};
+
 module Div = {
   let createElement = (~id, ~children, ()) =>
     TestRenderer.{
