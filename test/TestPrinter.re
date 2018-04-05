@@ -77,10 +77,21 @@ let printUpdateLog = formatter => {
     | UpdateInstance(update) =>
       Fmt.pf(
         formatter,
-        "%s {@[<hov>@,componentChanged: %s,@ stateChanged: %s,@ subTreeChanged: %a,@ oldInstance: %a,@ newInstance: %a @]}",
+        "%s {@[<hov>@,stateChanged: %s,@ subTreeChanged: %a,@ oldInstance: %a,@ newInstance: %a @]}",
         "UpdateInstance",
-        string_of_bool(update.componentChanged),
         string_of_bool(update.stateChanged),
+        printSubTreeChange,
+        update.subTreeChanged,
+        printInstance(),
+        update.oldInstance,
+        printInstance(),
+        update.newInstance
+      )
+    | SwitchComponent(update) =>
+      Fmt.pf(
+        formatter,
+        "%s {@[<hov>@,subTreeChanged: %a,@ oldInstance: %a,@ newInstance: %a @]}",
+        "SwitchComponent",
         printSubTreeChange,
         update.subTreeChanged,
         printInstance(),

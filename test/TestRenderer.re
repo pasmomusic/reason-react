@@ -21,27 +21,37 @@ type testSubTreeChange =
 type testUpdate = {
   oldInstance: testInstance,
   newInstance: testInstance,
-  componentChanged: bool,
   stateChanged: bool,
+  subTreeChanged: testSubTreeChange
+};
+
+type testSwitchComponent = {
+  oldInstance: testInstance,
+  newInstance: testInstance,
   subTreeChanged: testSubTreeChange
 };
 
 type testUpdateEntry =
   | TopLevelUpdate(testSubTreeChange)
-  | UpdateInstance(testUpdate);
+  | UpdateInstance(testUpdate)
+  | SwitchComponent(testSwitchComponent);
 
 type testUpdateLog = list(testUpdateEntry);
 
-let rec convertInstance =
-        (Instance({component, id, instanceSubTree, iState} as instance)) => {
-  component: InstanceAndComponent(component, instance),
-  id,
-  subtree: convertElement(instanceSubTree),
-  state: component.printState(iState)
-}
+let rec convertInstance:
+  'state 'action 'elementType .
+  instance('state, 'action, 'elementType) => testInstance
+ =
+  ({component, id, instanceSubTree, iState} as instance) => {
+    component: InstanceAndComponent(component, instance),
+    id,
+    subtree: convertElement(instanceSubTree),
+    state: component.printState(iState)
+  }
 and convertElement =
   fun
-  | IFlat(instances) => List.map(convertInstance, instances)
+  | IFlat(instances) =>
+    List.map((Instance(instance)) => convertInstance(instance), instances)
   | INested(_, elements) => List.flatten(List.map(convertElement, elements));
 
 let convertSubTreeChange =
@@ -68,9 +78,8 @@ let convertUpdateLog = (updateLog: ReasonReact.UpdateLog.t) => {
         UpdateInstance({
           ReasonReact.UpdateLog.oldId,
           newId,
-          oldOpaqueInstance,
-          newOpaqueInstance,
-          componentChanged,
+          instanceUpdate:
+            ReasonReact.UpdateLog.InstanceUpdate(oldInstance, newInstance),
           stateChanged,
           subTreeChanged
         }),
@@ -78,18 +87,39 @@ let convertUpdateLog = (updateLog: ReasonReact.UpdateLog.t) => {
       ] => [
         UpdateInstance({
           oldInstance: {
-            ...convertInstance(oldOpaqueInstance),
+            ...convertInstance(oldInstance),
             id: oldId
           },
           newInstance: {
-            ...convertInstance(newOpaqueInstance),
+            ...convertInstance(newInstance),
             id: newId
           },
-          componentChanged,
           stateChanged,
           subTreeChanged: convertSubTreeChange(subTreeChanged)
         }),
         ...convertUpdateLog(t)
+      ]
+    | [
+        SwitchComponent({
+          ReasonReact.UpdateLog.oldId,
+          newId,
+          oldOpaqueInstance: Instance(oldInstance),
+          newOpaqueInstance: Instance(newInstance),
+          subTreeChanged
+        }),
+        ...t
+      ] => [
+        SwitchComponent({
+          oldInstance: {
+            ...convertInstance(oldInstance),
+            id: oldId
+          },
+          newInstance: {
+            ...convertInstance(newInstance),
+            id: newId
+          },
+          subTreeChanged: convertSubTreeChange(subTreeChanged)
+        })
       ]
     };
   List.rev(convertUpdateLog(updateLog^));
@@ -153,15 +183,18 @@ let rec compareUpdateLog = (left, right) =>
   | ([], []) => true
   | ([UpdateInstance(x), ...t1], [UpdateInstance(y), ...t2]) =>
     x.stateChanged === y.stateChanged
-    && x.componentChanged === y.componentChanged
     && compareSubtree((x.subTreeChanged, y.subTreeChanged))
+    && compareUpdateLog(t1, t2)
+  | ([SwitchComponent(x), ...t1], [SwitchComponent(y), ...t2]) =>
+    compareSubtree((x.subTreeChanged, y.subTreeChanged))
+    && compareUpdateLog(t1, t2)
     && compareInstance((x.oldInstance, y.oldInstance))
     && compareInstance((x.newInstance, y.newInstance))
-    && compareUpdateLog(t1, t2)
   | ([TopLevelUpdate(x), ...t1], [TopLevelUpdate(y), ...t2]) =>
     compareSubtree((x, y)) && compareUpdateLog(t1, t2)
-  | ([TopLevelUpdate(_), ..._], [UpdateInstance(_), ..._])
-  | ([UpdateInstance(_), ..._], [TopLevelUpdate(_), ..._]) => false
+  | ([TopLevelUpdate(_), ..._], [_, ..._])
+  | ([UpdateInstance(_), ..._], [_, ..._])
+  | ([SwitchComponent(_), ..._], [_, ..._])
   | ([_, ..._], [])
   | ([], [_, ..._]) => false
   };

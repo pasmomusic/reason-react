@@ -45,7 +45,6 @@ let suite =
           TestComponents.[
             UpdateInstance({
               stateChanged: false,
-              componentChanged: false,
               subTreeChanged:
                 ReplaceElements(
                   [<Box id=3 state="ImABox" />],
@@ -56,7 +55,6 @@ let suite =
             }),
             UpdateInstance({
               stateChanged: false,
-              componentChanged: false,
               subTreeChanged: Nested,
               newInstance: twoBoxesWrapper,
               oldInstance: <BoxWrapper id=1> oneBox </BoxWrapper>
@@ -114,7 +112,6 @@ let suite =
             ],
             TestComponents.[
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance:
@@ -138,7 +135,6 @@ let suite =
             ],
             TestComponents.[
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance:
@@ -179,7 +175,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: true,
                 stateChanged: true,
                 subTreeChanged:
                   ReplaceElements(
@@ -221,7 +216,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance: <Text id=5 title="wrappedText:updatedText" />,
@@ -229,7 +223,6 @@ let suite =
                   <Text id=5 title="wrappedText:updatedTextmodified" />
               }),
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: false,
                 subTreeChanged: Nested,
                 oldInstance:
@@ -246,7 +239,6 @@ let suite =
                   </Div>
               }),
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: false,
                 subTreeChanged: Nested,
                 oldInstance:
@@ -334,7 +326,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged:
                   ReplaceElements(
@@ -362,7 +353,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged:
                   ReplaceElements(
@@ -397,7 +387,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: Nested,
                 oldInstance:
@@ -446,7 +435,6 @@ let suite =
             [<BoxList id=1> <Box id=2 state="Hello" /> </BoxList>],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged:
                   ReplaceElements([], [<Box id=2 state="Hello" />]),
@@ -469,7 +457,6 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged:
                   ReplaceElements(
@@ -499,21 +486,18 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance: <Box id=4 state="Hello" />,
                 newInstance: <Box id=4 state="World" />
               }),
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance: <Box id=3 state="World" />,
                 newInstance: <Box id=3 state="Hello" />
               }),
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: Nested,
                 oldInstance:
@@ -576,6 +560,30 @@ let suite =
           ),
           actual1
         );
+        check(
+          Alcotest.bool,
+          "Memoized nested box",
+          true,
+          ReasonReact.(
+            switch (rendered0, rendered1) {
+            | (
+                IFlat([Instance({instanceSubTree: IFlat([x])})]),
+                IFlat([
+                  Instance({
+                    instanceSubTree:
+                      IFlat([
+                        Instance({
+                          instanceSubTree: INested(_, [_, _, IFlat([y])])
+                        })
+                      ])
+                  })
+                ])
+              ) =>
+              x === y
+            | _ => false
+            }
+          )
+        );
       }
     ),
     (
@@ -619,14 +627,12 @@ let suite =
             ],
             [
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance: <Box id=1 state="Box1unchanged" />,
                 newInstance: <Box id=1 state="Box1changed" />
               }),
               UpdateInstance({
-                componentChanged: false,
                 stateChanged: true,
                 subTreeChanged: NoChange,
                 oldInstance: <Box id=2 state="Box2unchanged" />,
