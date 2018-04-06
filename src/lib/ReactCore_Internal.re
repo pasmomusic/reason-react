@@ -236,11 +236,11 @@ module Make = (Implementation: HostImplementation) => {
     type entry =
       | UpdateInstance(update)
       | SwitchComponent(switchComponent);
+    type t = ref(list(entry));
     type topLevelUpdate = {
       typ: subtreeChange,
-      updateLog: ref(list(entry))
+      updateLog: t
     };
-    type t = topLevelUpdate;
     let create = () => ref([]);
     let add = (updateLog, x) => updateLog := [x, ...updateLog^];
   };
@@ -897,7 +897,7 @@ module Make = (Implementation: HostImplementation) => {
     let listToRenderedElement = renderedElements =>
       INested("List", renderedElements);
     let render = reactElement : t => Render.renderReactElement(reactElement);
-    let update = (renderedElement: t, reactElement) : (t, UpdateLog.t) => {
+    let update = (renderedElement: t, reactElement) : (t, option(UpdateLog.topLevelUpdate)) => {
       let updateLog = UpdateLog.create();
       let (topLevelChange, newRenderedElement) =
         Render.updateRenderedElement(
@@ -905,7 +905,7 @@ module Make = (Implementation: HostImplementation) => {
           (renderedElement, reactElement, reactElement)
         );
       switch topLevelChange {
-      | NoChange => (newRenderedElement, None)
+      | NoChange => (renderedElement, None)
       | x => (newRenderedElement, Some({typ: x, updateLog}))
       };
     };
@@ -1090,13 +1090,6 @@ module Make = (Implementation: HostImplementation) => {
         };
       let applyEntryForestToplevel = (f, entry, parent, renderUpdateLog) =>
         switch entry {
-        | TopLevelUpdate(_) =>
-          /* TODO:
-               /* Mount new rendered element */
-               let forest = fromRenderedElement(parent, renderedElement);
-               Some(forest);
-             */
-          assert false
         | UpdateInstance(_) => applyEntryForest(f, entry)
         | SwitchComponent(_) => assert false
         };

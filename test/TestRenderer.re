@@ -67,13 +67,9 @@ let render = element => RenderedElement.render(element);
 let update = (element, next) => RenderedElement.update(element, next);
 
 let convertUpdateLog = (updateLog: ReasonReact.UpdateLog.t) => {
-  let rec convertUpdateLog = updateLogRef =>
+  let rec convertUpdateLog = (updateLogRef: list(ReasonReact.UpdateLog.entry)) =>
     switch updateLogRef {
     | [] => []
-    | [ReasonReact.UpdateLog.TopLevelUpdate(subtreeChange), ...t] => [
-        TopLevelUpdate(convertSubTreeChange(subtreeChange)),
-        ...convertUpdateLog(t)
-      ]
     | [
         UpdateInstance({
           ReasonReact.UpdateLog.oldId,

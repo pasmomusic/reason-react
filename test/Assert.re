@@ -83,5 +83,5 @@ let assertUpdateLog = (~label="", expected, actual) =>
 let assertUpdate =
     (~label="", (expectedElement, expectedLog), (actualElement, actualLog)) => {
   assertElement(~label, expectedElement, actualElement);
-  assertUpdateLog(~label, expectedLog, actualLog);
+  assertUpdateLog(~label, expectedLog, actualLog.ReasonReact.UpdateLog.updateLog);
 };
