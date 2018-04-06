@@ -32,11 +32,15 @@ type testSwitchComponent = {
 };
 
 type testUpdateEntry =
-  | TopLevelUpdate(testSubTreeChange)
   | UpdateInstance(testUpdate)
   | SwitchComponent(testSwitchComponent);
 
-type testUpdateLog = list(testUpdateEntry);
+type testUpdateLog = ref(list(testUpdateEntry));
+
+type testTopLevelUpdateLog = {
+  typ: testSubTreeChange,
+  updateLog: testUpdateLog
+};
 
 let rec convertInstance:
   'state 'action 'elementType .
@@ -121,6 +125,17 @@ let convertUpdateLog = (updateLog: ReasonReact.UpdateLog.t) => {
   List.rev(convertUpdateLog(updateLog^));
 };
 
+let convertTopLevelUpdateLog:
+  option(ReasonReact.UpdateLog.topLevelUpdate) => option(testTopLevelUpdateLog) =
+  fun
+  | Some(topLevelUpdate) =>
+    Some({
+      typ: convertSubTreeChange(topLevelUpdate.ReasonReact.UpdateLog.typ),
+      updateLog:
+        ref(convertUpdateLog(topLevelUpdate.ReasonReact.UpdateLog.updateLog))
+    })
+  | None => None;
+
 let compareComponents = (left, right) =>
   switch (left, right) {
   | (Component(_), Component(_))
@@ -181,19 +196,29 @@ let rec compareUpdateLog = (left, right) =>
     x.stateChanged === y.stateChanged
     && compareSubtree((x.subTreeChanged, y.subTreeChanged))
     && compareUpdateLog(t1, t2)
+    && compareInstance((x.oldInstance, y.oldInstance))
+    && compareInstance((x.newInstance, y.newInstance))
   | ([SwitchComponent(x), ...t1], [SwitchComponent(y), ...t2]) =>
     compareSubtree((x.subTreeChanged, y.subTreeChanged))
     && compareUpdateLog(t1, t2)
     && compareInstance((x.oldInstance, y.oldInstance))
     && compareInstance((x.newInstance, y.newInstance))
-  | ([TopLevelUpdate(x), ...t1], [TopLevelUpdate(y), ...t2]) =>
-    compareSubtree((x, y)) && compareUpdateLog(t1, t2)
-  | ([TopLevelUpdate(_), ..._], [_, ..._])
   | ([UpdateInstance(_), ..._], [_, ..._])
   | ([SwitchComponent(_), ..._], [_, ..._])
   | ([_, ..._], [])
   | ([], [_, ..._]) => false
   };
+
+let compareTopLevelUpdateLog:
+  (option(testTopLevelUpdateLog), option(testTopLevelUpdateLog)) => bool =
+  (left, right) =>
+    switch (left, right) {
+    | (None, None) => true
+    | (Some(x), Some(y)) =>
+      compareSubtree((x.typ, y.typ))
+      && compareUpdateLog(x.updateLog^, y.updateLog^)
+    | (_, _) => false
+    };
 
 let componentName = component =>
   switch component {
