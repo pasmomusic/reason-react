@@ -808,12 +808,13 @@ module Make = (Implementation: HostImplementation) => {
      * Rendering produces a list of instance trees.
      */
     type t = renderedElement;
+    type subtreeChange = [
+      | `Nested
+      | `PrependElement(renderedElement)
+      | `ReplaceElements(renderedElement, renderedElement)
+    ];
     type topLevelUpdate = {
-      subtreeChange: [
-        | `Nested
-        | `PrependElement(renderedElement)
-        | `ReplaceElements(renderedElement, renderedElement)
-      ],
+      subtreeChange,
       updateLog: UpdateLog.t
     };
     let listToRenderedElement = renderedElements =>
