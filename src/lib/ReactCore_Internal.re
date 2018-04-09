@@ -4,6 +4,9 @@ module type HostImplementation = {
   type hostView;
   let getInstance: int => option(hostView);
   let memoizeInstance: (int, hostView) => unit;
+  let freeInstance: int => unit;
+  let addSubview: (~parent: hostView, ~child: hostView) => unit;
+  let removeFromParent: (~parent: hostView, ~child: hostView) => unit;
 };
 
 module Make = (Implementation: HostImplementation) => {
@@ -457,8 +460,8 @@ module Make = (Implementation: HostImplementation) => {
      *
      * The UpdateLog:
      * ---------------------
-     * The updates happen depth first and so the update log contains the deepes
-     * changes first.
+     * The updates happen depth first and so the update log contains the deepest
+     * changes last.
      * A change at depth N in the tree, causes all nodes from 0 to N generate an
      * update. It's because the render tree is an immutable data structure.
      * A change deep within a tree, means that the subtree of its parent has
@@ -933,8 +936,8 @@ module Make = (Implementation: HostImplementation) => {
       | Container(node)
       | Concrete(Implementation.hostView, nativeElement, node)
     and node = {
-      mutable sub: list(tree),
       mutable id: int,
+      mutable sub: list(tree),
       mutable nearestParentView: Implementation.hostView
     };
     type forest = list(tree);
@@ -969,126 +972,114 @@ module Make = (Implementation: HostImplementation) => {
         fromOpaqueInstance(nearestParentView),
         Render.flattenRenderedElement(renderedElement)
       );
-    let applyUpdateLog = (updateLog, forest, parent) => {
-      open UpdateLog;
-      let applySubTreeChange = (n, change) =>
-        switch change {
+    let rec mountForest = (~forest, ~nearestParentView) =>
+      switch forest {
+      | [] => ()
+      | [Concrete(view, _, {sub}), ...t] =>
+        mountForest(~forest=sub, ~nearestParentView=view);
+        Implementation.addSubview(~parent=nearestParentView, ~child=view);
+        mountForest(t, nearestParentView);
+      | [Container({sub}), ...t] =>
+        mountForest(~forest=sub, ~nearestParentView);
+        mountForest(~forest=t, ~nearestParentView);
+      };
+    let rec removeForest = (~forest, ~nearestParentView) =>
+      switch forest {
+      | [] => ()
+      | [Concrete(view, _, {sub, id}), ...t] =>
+        removeForest(~forest=sub, ~nearestParentView=view);
+        Implementation.removeFromParent(
+          ~parent=nearestParentView,
+          ~child=view
+        );
+        Implementation.freeInstance(id);
+      | [Container({sub}), ...t] =>
+        removeForest(~forest=sub, ~nearestParentView)
+      };
+    let replaceForest = (~newRenderedElement, ~node, ~nearestParentView) => {
+      /* TODO: Invoke lifecycle */
+      let newForest =
+        fromRenderedElement(nearestParentView, newRenderedElement);
+      removeForest(~forest=node.sub, ~nearestParentView);
+      node.sub = newForest;
+      mountForest(newForest, nearestParentView);
+    };
+    let applyUpdateEntry = (tree, entry) => {
+      let Container(node) | Concrete(_, _, node) = tree;
+      switch entry {
+      | UpdateLog.UpdateInstance({oldInstance, newInstance, subTreeChanged})
+          when node.id === oldInstance.id =>
+        switch subTreeChanged {
         | `Nested
-        | `NoChange => n.sub
-        | `PrependElement(x) =>
-          let headTrees = fromRenderedElement(n.nearestParentView, x);
-          /* Add single headTrees */
-          List.rev_append(headTrees, n.sub);
-        | `ReplaceElements(oldElement, newElement) =>
-          let subTreeInstances = Render.flattenRenderedElement(newElement);
-          /*Remove all that were here, mount new ones */
-          let forest =
-            ListTR.map(
-              fromOpaqueInstance(n.nearestParentView),
-              subTreeInstances
-            );
-          forest;
+        | `NoChange => ()
+        | `PrependElement(renderedElement) =>
+          let newTree =
+            fromRenderedElement(node.nearestParentView, renderedElement);
+          node.sub = List.append(newTree, node.sub);
+        /* FIXME: Prepend dude */
+        | `ReplaceElements(_, newRenderedElement) =>
+          replaceForest(
+            ~newRenderedElement,
+            ~node,
+            ~nearestParentView=node.nearestParentView
+          )
         };
-      let rec applyEntryTree = (t, entry) : option(tree) =>
-        switch entry {
-        | UpdateInstance({
-            oldInstance,
-            newInstance,
-            stateChanged,
-            subTreeChanged
-          }) =>
-          switch t {
-          | Concrete(_, _, n)
-          | Container(n) => Some(t)
-          }
-        | ChangeComponent(_) => assert false
+        true;
+      | UpdateLog.ChangeComponent({
+          oldOpaqueInstance: Instance({id} as oldInstance),
+          newOpaqueInstance: Instance({instanceSubTree: newRenderedElement})
+        })
+          when node.id === oldInstance.id =>
+        replaceForest(
+          ~newRenderedElement,
+          ~node,
+          ~nearestParentView=node.nearestParentView
+        );
+        true;
+      | UpdateLog.UpdateInstance(_)
+      | UpdateLog.ChangeComponent(_) => false
+      };
+    };
+    /*
+     * We traverse the tree depth first. Since the deepest change in the tree
+     * is at the tail of the UpdateLog we know that we don't have to go deeper
+     * if the id of the tail matches the id of the current node in the tree.
+     */
+    let rec traverseTree = (t, entries: list(UpdateLog.entry)) => {
+      let Container({sub}) | Concrete(_, _, {sub}) = t;
+      switch (traverseForest(sub, entries)) {
+      | [] => []
+      | [entry, ...parentEntries] as allRemaining =>
+        if (applyUpdateEntry(t, entry)) {
+          parentEntries;
+        } else {
+          allRemaining;
         }
-      and applyEntryForest = (f, entry) : option(forest) =>
-        switch f {
-        | [] => None
-        | [t, ...nextF] =>
-          switch (applyEntryTree(t, entry)) {
-          | None =>
-            switch (applyEntryForest(nextF, entry)) {
-            | None => None
-            | Some(newForest) => Some([t, ...newForest])
-            }
-          | Some(newT) => Some([newT, ...nextF])
-          }
-        };
-      let applyEntryForestToplevel = (f, entry, parent, renderUpdateLog) =>
-        switch entry {
-        | UpdateInstance(_) => applyEntryForest(f, entry)
-        | ChangeComponent(_) => assert false
-        };
-      /* Prolly set size methodologically */
-      let renderUpdateLog = Hashtbl.create(100);
-      List.fold_left(
-        (f, entry) =>
-          switch (applyEntryForestToplevel(f, entry, parent, renderUpdateLog)) {
-          | None => f
-          | Some(newF) => newF
-          },
-        forest,
-        updateLog^
-      );
-    };
-  };
-  module LayoutTest = {
-    open Layout;
-    open OutputTree;
-    let rec make = tree =>
-      switch tree {
-      | Container(node) =>
-        LayoutSupport.createNode(
-          ~withChildren=Array.of_list(List.map(make, node.sub)),
-          ~andStyle=LayoutSupport.defaultStyle,
-          Container
-        )
-      | Concrete(view, nativeComponent, node) =>
-        LayoutSupport.createNode(
-          ~withChildren=Array.of_list(List.map(make, node.sub)),
-          ~andStyle=LayoutSupport.defaultStyle,
-          View(view)
-        )
       };
-    let make = (~root, ~outputTree as forest, ~width, ~height) => {
-      let children =
-        List.fold_left((t, element) => [make(element), ...t], [], forest);
-      LayoutSupport.createNode(
-        ~withChildren=Array.of_list(children),
-        ~andStyle={...LayoutSupport.defaultStyle, width, height},
-        View(root)
-      );
-    };
-    let performLayout = root => {
-      Layout.layoutNode(
-        root,
-        FixedEncoding.cssUndefined,
-        FixedEncoding.cssUndefined,
-        Ltr
-      );
-      let rec traverseLayout = (node: Layout.LayoutSupport.LayoutTypes.node) => {
-        Array.iter(traverseLayout, node.children);
-        switch node.context {
-        | Container => ()
-        | View(view) =>
-          /*
-           ignore(
-             NativeView.setFrame(
-               node.layout.left,
-               node.layout.top,
-               node.layout.width,
-               node.layout.height,
-               view
-             )
-           )
-           */
-          ()
-        };
+    }
+    and traverseForest = (f, entries) =>
+      switch f {
+      | [] => entries
+      | [t, ...nextF] =>
+        switch (traverseTree(t, entries)) {
+        | [] => []
+        | remainingEntries => traverseForest(nextF, remainingEntries)
+        }
       };
-      traverseLayout(root);
-    };
+    let applyUpdateLog = (t, updateLog) =>
+      switch (traverseForest(t, List.rev(updateLog^))) {
+      | [] => ()
+      | l => failwith("Internal error: Applied an incompatible UpdateLog")
+      };
+    let rec traverseHostViewTree = (f, t: list(tree)) =>
+      List.iter(traverseTree(f), t)
+    and traverseTree = (f, t) =>
+      switch t {
+      | Container({sub}) => traverseHostViewTree(f, sub)
+      | Concrete(view, _, {sub}) =>
+        traverseHostViewTree(f, sub);
+        f(view);
+      };
   };
   module RemoteAction = {
     type t('action) = {mutable act: 'action => unit};

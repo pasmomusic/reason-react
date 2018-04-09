@@ -2,6 +2,9 @@ module type HostImplementation = {
   type hostView;
   let getInstance: int => option(hostView);
   let memoizeInstance: (int, hostView) => unit;
+  let freeInstance: int => unit;
+  let addSubview: (~parent: hostView, ~child: hostView) => unit;
+  let removeFromParent: (~parent: hostView, ~child: hostView) => unit;
 };
 
 module Make:
@@ -134,7 +137,10 @@ module Make:
       type t;
       let fromRenderedElement:
         (Implementation.hostView, RenderedElement.t) => t;
-      let applyUpdateLog: (UpdateLog.t, t, Implementation.hostView) => t;
+      let mountForest:
+        (~forest: t, ~nearestParentView: Implementation.hostView) => unit;
+      let applyUpdateLog: (t, UpdateLog.t) => unit;
+      let traverseHostViewTree: (Implementation.hostView => unit, t) => unit;
     };
 
     /***

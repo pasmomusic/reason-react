@@ -12,6 +12,9 @@ module Implementation = {
       None;
     };
   let memoizeInstance = (id, instance) => Hashtbl.add(map, id, instance);
+  let freeInstance = (id) => Hashtbl.remove(map, id);
+  let removeFromParent = (~parent, ~child) => ();
+  let addSubview = (~parent, ~child) => ();
 };
 
 include ReactCore_Internal.Make(Implementation);
