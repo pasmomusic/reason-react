@@ -41,33 +41,38 @@ typedef void (^ActionBlock)();
 @end
 
 static NSMutableDictionary *PSM_Views;
+static NSMutableArray *PSM_Views_ALL;
 UIView *rootView;
 dispatch_queue_t q;
 
-
-
-CAMLprim value View_newView(value id_) {
-    CAMLparam1(id_);
-    int _id = Int_val(id_);
+CAMLprim value View_newView() {
     UIView __block *view = nil;
     dispatch_sync(dispatch_get_main_queue(), ^{
         view = [UIView new];
         view.layer.borderWidth = 0.5;
         view.layer.borderColor = [[UIColor blackColor] CGColor];
     });
-    [PSM_Views setObject:view forKey:@(_id)];
-    CAMLreturn((long) view);
+    [PSM_Views_ALL addObject:view];
+    return (long) view;
 }
 
-CAMLprim value Button_makeInstance(value id_) {
-    CAMLparam1(id_);
-    int _id = Int_val(id_);
+CAMLprim value View_memoizeInstance(intnat id_, UIView *view) {
+    [PSM_Views setObject:view forKey:@(id_)];
+    return Val_unit;
+}
+
+CAMLprim value View_freeInstance(intnat id_) {
+    [PSM_Views removeObjectForKey:@(id_)];
+    return Val_unit;
+}
+
+CAMLprim value Button_makeInstance() {
     UIButton __block *view = nil;
     dispatch_sync(dispatch_get_main_queue(), ^{
         view = [UIBlockButton buttonWithType:UIButtonTypeSystem];
     });
-    [PSM_Views setObject:view forKey:@(_id)];
-    CAMLreturn((long)view);
+    [PSM_Views_ALL addObject:view];
+    return (long)view;
 }
 
 CAMLprim value Button_setText(value text, UIBlockButton *view) {
@@ -90,20 +95,6 @@ CAMLprim value Button_setCallback(value c, UIBlockButton *view) {
         }];
     });
     CAMLreturn((long)view);
-}
-
-CAMLprim value View_getInstance(value id_) {
-    CAMLparam1(id_);
-    int _id = Int_val(id_);
-    UIView *view = [PSM_Views objectForKey:@(_id)];
-    if (view) {
-        CAMLlocal1( some );
-        some = caml_alloc(1, 0);
-        Store_field( some, 0, (long) view );
-        CAMLreturn( some );
-    } else {
-        CAMLreturn(Val_int(0));
-    }
 }
 
 CAMLprim value View_setFrame(intnat x, intnat y, intnat width, intnat height, UIView *view) {
@@ -195,6 +186,7 @@ void CA_registerLoop(value c) {
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     PSM_Views = [NSMutableDictionary new];
+    PSM_Views_ALL = [NSMutableArray new];
     rootView = [UIView new];
     q = dispatch_queue_create(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     [PSM_Views setObject:rootView forKey:@"ROOT"];
