@@ -113,3 +113,28 @@ let printTopLevelUpdateLog =
     | None => Fmt.pf(formatter, "%s", "NoUpdate")
     }
   );
+
+let printRenderLog = formatter => {
+  let rec pp = () => Fmt.brackets(Fmt.list(~sep=Fmt.comma, printRenderLog()))
+  and printRenderLog = ((), formatter, entry: ReasonReact.RenderLog.entry) =>
+    switch entry {
+    | AddSubview(parent, child) =>
+      Fmt.pf(
+        formatter,
+        "%s: {@[<hov>@,parent: %s,@ child: %s @]}",
+        "AddSubview",
+        string_of_int(parent),
+        string_of_int(child)
+      )
+    | GetInstance(_)
+    | MemoizeInstance(_, _)
+    | FreeInstance(_)
+    | RemoveFromParent(_, _)
+    | ComponentDidMount(_)
+    | ComponentDidUpdate(_)
+    | ComponentWillUnmount(_)
+    | UpdateInstance(_, _)
+    | UpdateInstance(_) => Fmt.pf(formatter, "%s", "[to be printed]")
+    };
+  Fmt.pf(formatter, "%a", pp());
+};

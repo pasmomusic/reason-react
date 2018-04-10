@@ -213,6 +213,14 @@ let compareTopLevelUpdateLog:
     | (_, _) => false
     };
 
+let rec compareRenderLog: (RenderLog.t, RenderLog.t) => bool =
+  (left, right) =>
+    switch (left, right) {
+    | ([], []) => true
+    | ([x, ...tl1], [y, ...tl2]) => x == y && compareRenderLog(tl1, tl2)
+    | (_, _) => false
+    };
+
 let componentName = component =>
   switch component {
   | InstanceAndComponent(component, _) => component.debugName

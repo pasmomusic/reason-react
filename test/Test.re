@@ -10,6 +10,14 @@ let suite =
         ReasonReact.GlobalState.reset();
         let component = BoxWrapper.make();
         let rendered = render(ReasonReact.element(component));
+        let newView = ReasonReact.Implementation.View;
+        let forest =
+          ReasonReact.OutputTree.fromRenderedElement(newView, rendered);
+        ReasonReact.OutputTree.mountForest(
+          ~forest,
+          ~nearestParentView=newView
+        );
+        assertRenderLog(~label="First render log matches", [AddSubview(0, 2)]);
         let expected =
           TestComponents.[
             <BoxWrapper id=1>
@@ -546,10 +554,7 @@ let suite =
         let (rendered1, _) as actual1 =
           RenderedElement.update(
             rendered0,
-            Nested(
-              "div",
-              [ReasonReact.stringToElement("before"), Nested("div", [box_])]
-            )
+            Nested("div", [stringToElement("before"), Nested("div", [box_])])
           );
         assertUpdate(
           ~label="After update",

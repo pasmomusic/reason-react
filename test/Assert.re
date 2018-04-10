@@ -18,6 +18,11 @@ let updateLog =
     TestRenderer.compareUpdateLog
   );
 
+let renderLog = Alcotest.testable(
+  (formatter, t) => TestPrinter.printRenderLog(formatter, t),
+  TestRenderer.compareRenderLog
+);
+
 let line = (ppf, ~color=?, c) => {
   open Astring;
   let with_process_in = (cmd, f) => {
@@ -82,6 +87,9 @@ let assertElement = (~label="", expected, rendered) =>
     expected,
     TestRenderer.convertElement(rendered)
   );
+
+let assertRenderLog = (~label="", expected) =>
+  check(renderLog, label, expected, ReasonReact.RenderLog.global^);
 
 let assertUpdateLog = (~label="", expected, actual) =>
   check(updateLog, label, expected, TestRenderer.convertUpdateLog(actual));

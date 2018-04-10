@@ -1,10 +1,35 @@
 open R2n2;
 
 module Implementation = {
-  let map = Hashtbl.create(1000);
   type hostView =
     | Text(string)
     | View;
+  module RenderLog = {
+    type payload = {
+      component: string,
+      state: string
+    };
+    type stateUpdatePayload = {
+      component: string,
+      oldState: string,
+      newState: string
+    };
+    type entry =
+      | GetInstance(int)
+      | MemoizeInstance(int, hostView)
+      | FreeInstance(int)
+      | AddSubview(int, int)
+      | RemoveFromParent(hostView, hostView)
+      | ComponentDidMount(payload)
+      | ComponentDidUpdate(stateUpdatePayload)
+      | ComponentWillUnmount(payload)
+      | UpdateInstance(payload, hostView);
+    type t = list(entry);
+    let global: ref(t) = ref([]);
+    let add = (action: entry) => global := [action, ...global^];
+    let reset = () => global := [];
+  };
+  let map: Hashtbl.t(int, hostView) = Hashtbl.create(1000);
   let getInstance = id =>
     if (Hashtbl.mem(map, id)) {
       Some(Hashtbl.find(map, id));
@@ -12,33 +37,25 @@ module Implementation = {
       None;
     };
   let memoizeInstance = (id, instance) => Hashtbl.add(map, id, instance);
-  let freeInstance = (id) => Hashtbl.remove(map, id);
+  let freeInstance = id => Hashtbl.remove(map, id);
   let removeFromParent = (~parent, ~child) => ();
-  let addSubview = (~parent, ~child) => ();
+  let addSubview = (~parent, ~child) => RenderLog.add(AddSubview(0, 1));
 };
 
-include ReactCore_Internal.Make(Implementation);
+module RenderLog = Implementation.RenderLog;
 
-module Text = {
-  /**
-   * FIXME: If a different prop is supplied as title, the change is not picked up by React.
-   * It's because make returns a host element and there's no way to know if a Host element
-   * is not changed.
-   * */
-  let component = statefulNativeComponent("Text");
-  let make = (~title="ImABox", _children) => {
-    ...component,
-    initialState: () => title,
-    willReceiveProps: (_) => title,
-    printState: (_) => title,
-    render: (_) => {
-      children: listToElement([]),
-      make: () => Implementation.Text(title),
-      updateInstance: (_) => ()
-    }
+module ReasonReact = ReactCore_Internal.Make(Implementation);
+
+include (
+  ReasonReact:
+    (module type of ReasonReact) with
+      module GlobalState := ReasonReact.GlobalState
+);
+
+module GlobalState = {
+  include ReasonReact.GlobalState;
+  let reset = () => {
+    reset();
+    RenderLog.reset();
   };
-  let createElement = (~key=?, ~title=?, ~children as _children, ()) =>
-    element(~key?, make(~title?, ()));
 };
-
-let stringToElement = string => <Text title=string />;
