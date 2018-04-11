@@ -10,14 +10,6 @@ let suite =
         ReasonReact.GlobalState.reset();
         let component = BoxWrapper.make();
         let rendered = render(ReasonReact.element(component));
-        let newView = ReasonReact.Implementation.View;
-        let forest =
-          ReasonReact.OutputTree.fromRenderedElement(newView, rendered);
-        ReasonReact.OutputTree.mountForest(
-          ~forest,
-          ~nearestParentView=newView
-        );
-        assertRenderLog(~label="First render log matches", [AddSubview(0, 2)]);
         let expected =
           TestComponents.[
             <BoxWrapper id=1>
@@ -25,6 +17,32 @@ let suite =
             </BoxWrapper>
           ];
         assertElement(expected, rendered);
+        let newView =
+          ReasonReact.Implementation.{name: "root", id: (-1), element: View};
+        let forest =
+          ReasonReact.OutputTree.fromRenderedElement(newView, rendered);
+        ReasonReact.OutputTree.mountForest(
+          ~forest,
+          ~nearestParentView=newView
+        );
+        let expectedDiv =
+          ReasonReact.Implementation.{name: "Div", id: 2, element: View};
+        let expectedBox =
+          ReasonReact.Implementation.{
+            name: "Box",
+            id: 3,
+            element: Text("ImABox")
+          };
+        let expectedRender =
+          ReasonReact.RenderLog.[
+            GetInstance(3),
+            MemoizeInstance(3, expectedBox),
+            GetInstance(2),
+            MemoizeInstance(2, expectedDiv),
+            AddSubview(expectedDiv, expectedBox),
+            AddSubview(newView, expectedDiv)
+          ];
+        assertRenderLog(~label="First render log matches", expectedRender);
       }
     ),
     (
@@ -53,29 +71,27 @@ let suite =
           Some({
             subtreeChange: `Nested,
             updateLog:
-              ref(
-                TestComponents.[
-                  UpdateInstance({
-                    stateChanged: false,
-                    subTreeChanged:
-                      `ReplaceElements((
-                        [<Box id=3 state="ImABox" />],
-                        [
-                          <Box id=4 state="ImABox" />,
-                          <Box id=5 state="ImABox" />
-                        ]
-                      )),
-                    newInstance: twoBoxes,
-                    oldInstance: oneBox
-                  }),
-                  UpdateInstance({
-                    stateChanged: false,
-                    subTreeChanged: `Nested,
-                    newInstance: twoBoxesWrapper,
-                    oldInstance: <BoxWrapper id=1> oneBox </BoxWrapper>
-                  })
-                ]
-              )
+              TestComponents.[
+                UpdateInstance({
+                  stateChanged: false,
+                  subTreeChanged:
+                    `ReplaceElements((
+                      [<Box id=3 state="ImABox" />],
+                      [
+                        <Box id=4 state="ImABox" />,
+                        <Box id=5 state="ImABox" />
+                      ]
+                    )),
+                  newInstance: twoBoxes,
+                  oldInstance: oneBox
+                }),
+                UpdateInstance({
+                  stateChanged: false,
+                  subTreeChanged: `Nested,
+                  newInstance: twoBoxesWrapper,
+                  oldInstance: <BoxWrapper id=1> oneBox </BoxWrapper>
+                })
+              ]
           })
         );
         assertUpdate(expected, actual);
@@ -125,17 +141,16 @@ let suite =
             Some(
               TestRenderer.{
                 subtreeChange: `Nested,
-                updateLog:
-                  ref([
-                    UpdateInstance({
-                      stateChanged: true,
-                      subTreeChanged: `NoChange,
-                      oldInstance:
-                        <ChangeCounter id=1 label="defaultText" counter=10 />,
-                      newInstance:
-                        <ChangeCounter id=1 label="updatedText" counter=11 />
-                    })
-                  ])
+                updateLog: [
+                  UpdateInstance({
+                    stateChanged: true,
+                    subTreeChanged: `NoChange,
+                    oldInstance:
+                      <ChangeCounter id=1 label="defaultText" counter=10 />,
+                    newInstance:
+                      <ChangeCounter id=1 label="updatedText" counter=11 />
+                  })
+                ]
               }
             )
           ),
@@ -189,26 +204,25 @@ let suite =
             Some(
               TestRenderer.{
                 subtreeChange: `Nested,
-                updateLog:
-                  ref([
-                    ChangeComponent({
-                      oldSubtree: [],
-                      newSubtree: [
-                        <Div id=3>
-                          <Text id=4 title="buttonWrapperWrapperState" />
-                          <Text id=5 title="wrappedText:updatedText" />
-                          <ButtonWrapper id=6 />
-                        </Div>
-                      ],
-                      oldInstance:
-                        <ChangeCounter id=1 label="updatedText" counter=2011 />,
-                      newInstance:
-                        <ButtonWrapperWrapper
-                          id=2
-                          nestedText="wrappedText:updatedText"
-                        />
-                    })
-                  ])
+                updateLog: [
+                  ChangeComponent({
+                    oldSubtree: [],
+                    newSubtree: [
+                      <Div id=3>
+                        <Text id=4 title="buttonWrapperWrapperState" />
+                        <Text id=5 title="wrappedText:updatedText" />
+                        <ButtonWrapper id=6 />
+                      </Div>
+                    ],
+                    oldInstance:
+                      <ChangeCounter id=1 label="updatedText" counter=2011 />,
+                    newInstance:
+                      <ButtonWrapperWrapper
+                        id=2
+                        nestedText="wrappedText:updatedText"
+                      />
+                  })
+                ]
               }
             )
           ),
@@ -231,47 +245,45 @@ let suite =
             Some(
               TestRenderer.{
                 subtreeChange: `Nested,
-                updateLog:
-                  ref([
-                    UpdateInstance({
-                      stateChanged: true,
-                      subTreeChanged: `NoChange,
-                      oldInstance:
-                        <Text id=5 title="wrappedText:updatedText" />,
-                      newInstance:
+                updateLog: [
+                  UpdateInstance({
+                    stateChanged: true,
+                    subTreeChanged: `NoChange,
+                    oldInstance: <Text id=5 title="wrappedText:updatedText" />,
+                    newInstance:
+                      <Text id=5 title="wrappedText:updatedTextmodified" />
+                  }),
+                  UpdateInstance({
+                    stateChanged: false,
+                    subTreeChanged: `Nested,
+                    oldInstance:
+                      <Div id=3>
+                        <Text id=4 title="buttonWrapperWrapperState" />
+                        <Text id=5 title="wrappedText:updatedText" />
+                        <ButtonWrapper id=6 />
+                      </Div>,
+                    newInstance:
+                      <Div id=3>
+                        <Text id=4 title="buttonWrapperWrapperState" />
                         <Text id=5 title="wrappedText:updatedTextmodified" />
-                    }),
-                    UpdateInstance({
-                      stateChanged: false,
-                      subTreeChanged: `Nested,
-                      oldInstance:
-                        <Div id=3>
-                          <Text id=4 title="buttonWrapperWrapperState" />
-                          <Text id=5 title="wrappedText:updatedText" />
-                          <ButtonWrapper id=6 />
-                        </Div>,
-                      newInstance:
-                        <Div id=3>
-                          <Text id=4 title="buttonWrapperWrapperState" />
-                          <Text id=5 title="wrappedText:updatedTextmodified" />
-                          <ButtonWrapper id=6 />
-                        </Div>
-                    }),
-                    UpdateInstance({
-                      stateChanged: false,
-                      subTreeChanged: `Nested,
-                      oldInstance:
-                        <ButtonWrapperWrapper
-                          id=2
-                          nestedText="wrappedText:updatedText"
-                        />,
-                      newInstance:
-                        <ButtonWrapperWrapper
-                          id=2
-                          nestedText="wrappedText:updatedTextmodified"
-                        />
-                    })
-                  ])
+                        <ButtonWrapper id=6 />
+                      </Div>
+                  }),
+                  UpdateInstance({
+                    stateChanged: false,
+                    subTreeChanged: `Nested,
+                    oldInstance:
+                      <ButtonWrapperWrapper
+                        id=2
+                        nestedText="wrappedText:updatedText"
+                      />,
+                    newInstance:
+                      <ButtonWrapperWrapper
+                        id=2
+                        nestedText="wrappedText:updatedTextmodified"
+                      />
+                  })
+                ]
               }
             )
           ),
@@ -573,7 +585,7 @@ let suite =
                       <BoxWithDynamicKeys id=1 state="box to move" />
                     ]
                   )),
-                updateLog: ref([])
+                updateLog: []
               }
             )
           ),
@@ -641,21 +653,20 @@ let suite =
             Some(
               TestRenderer.{
                 subtreeChange: `Nested,
-                updateLog:
-                  ref([
-                    UpdateInstance({
-                      stateChanged: true,
-                      subTreeChanged: `NoChange,
-                      oldInstance: <Box id=1 state="Box1unchanged" />,
-                      newInstance: <Box id=1 state="Box1changed" />
-                    }),
-                    UpdateInstance({
-                      stateChanged: true,
-                      subTreeChanged: `NoChange,
-                      oldInstance: <Box id=2 state="Box2unchanged" />,
-                      newInstance: <Box id=2 state="Box2changed" />
-                    })
-                  ])
+                updateLog: [
+                  UpdateInstance({
+                    stateChanged: true,
+                    subTreeChanged: `NoChange,
+                    oldInstance: <Box id=1 state="Box1unchanged" />,
+                    newInstance: <Box id=1 state="Box1changed" />
+                  }),
+                  UpdateInstance({
+                    stateChanged: true,
+                    subTreeChanged: `NoChange,
+                    oldInstance: <Box id=2 state="Box2unchanged" />,
+                    newInstance: <Box id=2 state="Box2changed" />
+                  })
+                ]
               }
             )
           ),

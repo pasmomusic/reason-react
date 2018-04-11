@@ -4,7 +4,6 @@
 module Box = {
   open ReasonReact;
   let component = statefulNativeComponent("Box");
-  let printState = x => x;
   let make = (~title="ImABox", ~onClick as _=?, _children) => {
     ...component,
     /* didUpdate: ({state} as oldSelf, _) =>
@@ -14,10 +13,10 @@ module Box = {
        ), */
     initialState: () => title,
     willReceiveProps: (_) => title,
-    printState,
+    printState: (_) => title,
     render: (_) => {
       children: ReasonReact.listToElement([]),
-      make: () => Implementation.Text(title),
+      make: () => Implementation.{name: "Box", id: 0, element: Text(title)},
       updateInstance: (_) => ()
     }
   };
@@ -40,7 +39,7 @@ module Text = {
     printState: (_) => title,
     render: (_) => {
       children: listToElement([]),
-      make: () => Implementation.Text(title),
+      make: () => Implementation.{name: "Text", id: 0, element: Text(title)},
       updateInstance: (_) => ()
     }
   };
@@ -59,7 +58,7 @@ module Div = {
        RenderLog.add(RenderLog.global, ComponentDidUpdate("Div", "")), */
     render: (_) => {
       children: listToElement(children),
-      make: () => Implementation.View,
+      make: () => Implementation.{name: "Div", id: 0, element: View},
       updateInstance: (_) => ()
     }
   };
@@ -98,6 +97,7 @@ module BoxWithDynamicKeys = {
     ...component,
     /* didUpdate: ({state}) =>
        RenderLog.add(renderLog, ComponentDidUpdate("BoxWithDynamicKeys", "")), */
+    printState: (_) => title,
     render: _self => ReasonReact.listToElement([])
   };
   let createElement = (~title, ~children, ()) =>

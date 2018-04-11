@@ -5,7 +5,7 @@ let printList = (indent, lst) => {
   "[" ++ String.concat(",\n", List.map(s => s, lst)) ++ "\n" ++ indent ++ "]";
 };
 
-let rec printTreeFormatter = () => Fmt.hvbox(Fmt.list(printInstance()))
+let rec treeFormatter = () => Fmt.hvbox(Fmt.list(printInstance()))
 and printInstance = () =>
   Fmt.hvbox((formatter, instance) =>
     switch instance.subtree {
@@ -30,14 +30,14 @@ and printInstance = () =>
         | "" => ""
         | x => " state=\"" ++ x ++ "\""
         },
-        printTreeFormatter(),
+        treeFormatter(),
         sub,
         componentName(instance.component)
       )
     }
   );
 
-let printElement = formatter => Fmt.pf(formatter, "%a", printTreeFormatter());
+let element = formatter => Fmt.pf(formatter, "%a", treeFormatter());
 
 let printSubTreeChange = formatter =>
   Fmt.pf(
@@ -48,21 +48,21 @@ let printSubTreeChange = formatter =>
       | `NoChange => Fmt.pf(formatter, "%s", "`NoChange")
       | `Nested => Fmt.pf(formatter, "%s", "`Nested")
       | `PrependElement(x) =>
-        Fmt.pf(formatter, "`PrependElement: %a@,", printElement, x)
+        Fmt.pf(formatter, "`PrependElement: %a@,", element, x)
       | `ReplaceElements(oldElems, newElems) =>
         Fmt.pf(
           formatter,
           "`ReplaceElements: %a@, %a@,",
-          printElement,
+          element,
           oldElems,
-          printElement,
+          element,
           newElems
         )
       }
     )
   );
 
-let printUpdateLog = formatter => {
+let updateLog = formatter => {
   let rec pp = () => Fmt.brackets(Fmt.list(~sep=Fmt.comma, printUpdateLog()))
   and printUpdateLog = ((), formatter, entry) =>
     switch entry {
@@ -84,9 +84,9 @@ let printUpdateLog = formatter => {
         formatter,
         "%s {@[<hov>@,oldSubtree: %a,@ newSubtree: %a,@ oldInstance: %a,@ newInstance: %a @]}",
         "ChangeComponent",
-        printElement,
+        element,
         update.oldSubtree,
-        printElement,
+        element,
         update.newSubtree,
         printInstance(),
         update.oldInstance,
@@ -97,7 +97,7 @@ let printUpdateLog = formatter => {
   Fmt.pf(formatter, "%a", pp());
 };
 
-let printTopLevelUpdateLog =
+let topLevelUpdateLog =
   Fmt.hvbox((formatter, topLevelUpdateLog: option(testTopLevelUpdateLog)) =>
     switch topLevelUpdateLog {
     | Some(topLevelUpdate) =>
@@ -107,33 +107,50 @@ let printTopLevelUpdateLog =
         "TopLevelUpdate",
         printSubTreeChange,
         topLevelUpdate.subtreeChange,
-        printUpdateLog,
-        topLevelUpdate.updateLog^
+        updateLog,
+        topLevelUpdate.updateLog
       )
     | None => Fmt.pf(formatter, "%s", "NoUpdate")
     }
   );
 
-let printRenderLog = formatter => {
+let hostElement: ReasonReact.Implementation.hostElement => string =
+  fun
+  | View => "View"
+  | Text(title) => "Text(" ++ title ++ ")";
+
+let renderLog = formatter => {
   let rec pp = () => Fmt.brackets(Fmt.list(~sep=Fmt.comma, printRenderLog()))
   and printRenderLog = ((), formatter, entry: ReasonReact.RenderLog.entry) =>
     switch entry {
+    | GetInstance(id) =>
+      Fmt.pf(formatter, "GetInstance(%s)", string_of_int(id))
+    | MemoizeInstance(id, instance) =>
+      Fmt.pf(
+        formatter,
+        "MemoizeInstance(%s, {@[<hov>@,\"%s\", %s, %s}@])",
+        string_of_int(id),
+        instance.name,
+        string_of_int(instance.id),
+        hostElement(instance.element)
+      )
     | AddSubview(parent, child) =>
       Fmt.pf(
         formatter,
-        "%s: {@[<hov>@,parent: %s,@ child: %s @]}",
-        "AddSubview",
-        string_of_int(parent),
-        string_of_int(child)
+        "AddSubview({@[<hov>@,\"%s\", %s, %s},@ {\"%s\", %s, %s}@])",
+        parent.name,
+        string_of_int(parent.id),
+        hostElement(parent.element),
+        child.name,
+        string_of_int(child.id),
+        hostElement(child.element)
       )
-    | GetInstance(_)
-    | MemoizeInstance(_, _)
+    | CreateInstance(_)
     | FreeInstance(_)
     | RemoveFromParent(_, _)
     | ComponentDidMount(_)
     | ComponentDidUpdate(_)
     | ComponentWillUnmount(_)
-    | UpdateInstance(_, _)
     | UpdateInstance(_) => Fmt.pf(formatter, "%s", "[to be printed]")
     };
   Fmt.pf(formatter, "%a", pp());

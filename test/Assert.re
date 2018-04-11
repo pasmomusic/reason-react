@@ -2,26 +2,27 @@ open Alcotest;
 
 let renderedElement =
   Alcotest.testable(
-    (formatter, t) => TestPrinter.printElement(formatter, t),
-    TestRenderer.compareElement
+    (formatter, t) => Print.element(formatter, t),
+    TestRenderer.equal
   );
 
 let topLevelUpdateLog =
   Alcotest.testable(
-    (formatter, t) => TestPrinter.printTopLevelUpdateLog(formatter, t),
+    (formatter, t) => Print.topLevelUpdateLog(formatter, t),
     TestRenderer.compareTopLevelUpdateLog
   );
 
 let updateLog =
   Alcotest.testable(
-    (formatter, t) => TestPrinter.printUpdateLog(formatter, t),
-    TestRenderer.compareUpdateLog
+    (formatter, t) => Print.updateLog(formatter, t),
+    TestRenderer.equal_testUpdateLog
   );
 
-let renderLog = Alcotest.testable(
-  (formatter, t) => TestPrinter.printRenderLog(formatter, t),
-  TestRenderer.compareRenderLog
-);
+let renderLog =
+  Alcotest.testable(
+    (formatter, t) => Print.renderLog(formatter, t),
+    ReasonReact.RenderLog.equal
+  );
 
 let line = (ppf, ~color=?, c) => {
   open Astring;
@@ -89,7 +90,7 @@ let assertElement = (~label="", expected, rendered) =>
   );
 
 let assertRenderLog = (~label="", expected) =>
-  check(renderLog, label, expected, ReasonReact.RenderLog.global^);
+  check(renderLog, label, expected, List.rev(ReasonReact.RenderLog.global^));
 
 let assertUpdateLog = (~label="", expected, actual) =>
   check(updateLog, label, expected, TestRenderer.convertUpdateLog(actual));
