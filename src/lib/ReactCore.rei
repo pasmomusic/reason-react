@@ -1,85 +1,15 @@
 module type HostImplementation = {
   type hostView;
   let getInstance: int => option(hostView);
+  let memoizeInstance: (int, hostView) => unit;
+  let freeInstance: int => unit;
+  let addSubview: (~parent: hostView, ~child: hostView) => unit;
+  let removeFromParent: (~parent: hostView, ~child: hostView) => unit;
 };
 
 module Make:
   (Implementation: HostImplementation) =>
   {
-    module Node: {type context;};
-    module Layout: {
-      type t;
-      type unitOfM = int;
-      type direction;
-      type flexDirection =
-        | Column
-        | ColumnReverse
-        | Row
-        | RowReverse;
-      type justify;
-      type align;
-      type positionType;
-      type wrapType;
-      type overflow;
-      type cssStyle = {
-        mutable direction,
-        mutable flexDirection,
-        mutable justifyContent: justify,
-        mutable alignContent: align,
-        mutable alignItems: align,
-        mutable alignSelf: align,
-        mutable positionType,
-        mutable flexWrap: wrapType,
-        mutable overflow,
-        mutable flex: unitOfM,
-        mutable flexGrow: unitOfM,
-        mutable flexShrink: unitOfM,
-        mutable flexBasis: unitOfM,
-        mutable marginLeft: unitOfM,
-        mutable marginTop: unitOfM,
-        mutable marginRight: unitOfM,
-        mutable marginBottom: unitOfM,
-        mutable marginStart: unitOfM,
-        mutable marginEnd: unitOfM,
-        mutable marginHorizontal: unitOfM,
-        mutable marginVertical: unitOfM,
-        mutable margin: unitOfM,
-        mutable width: unitOfM,
-        mutable height: unitOfM,
-        mutable minWidth: unitOfM,
-        mutable minHeight: unitOfM,
-        mutable maxWidth: unitOfM,
-        mutable maxHeight: unitOfM,
-        mutable left: unitOfM,
-        mutable top: unitOfM,
-        mutable right: unitOfM,
-        mutable bottom: unitOfM,
-        mutable start: unitOfM,
-        mutable endd: unitOfM,
-        mutable horizontal: unitOfM,
-        mutable vertical: unitOfM,
-        mutable position: unitOfM,
-        mutable paddingLeft: unitOfM,
-        mutable paddingTop: unitOfM,
-        mutable paddingRight: unitOfM,
-        mutable paddingBottom: unitOfM,
-        mutable paddingStart: unitOfM,
-        mutable paddingEnd: unitOfM,
-        mutable paddingHorizontal: unitOfM,
-        mutable paddingVertical: unitOfM,
-        mutable padding: unitOfM,
-        mutable borderLeft: unitOfM,
-        mutable borderTop: unitOfM,
-        mutable borderRight: unitOfM,
-        mutable borderBottom: unitOfM,
-        mutable borderStart: unitOfM,
-        mutable borderEnd: unitOfM,
-        mutable borderHorizontal: unitOfM,
-        mutable borderVertical: unitOfM,
-        mutable border: unitOfM
-      };
-      let defaultStyle: cssStyle;
-    };
     module GlobalState: {
       let debug: ref(bool);
       let reset: unit => unit;
@@ -128,10 +58,9 @@ module Make:
     /*** Type of a react element before rendering  */
     type reactElement;
     type nativeElement = {
-      make: int => Implementation.hostView,
-      setProps: Implementation.hostView => unit,
-      children: reactElement,
-      style: Layout.cssStyle
+      make: unit => Implementation.hostView,
+      updateInstance: Implementation.hostView => unit,
+      children: reactElement
     };
     type elementType('concreteElementType);
     type instance('state, 'action, 'elementType);
@@ -139,6 +68,7 @@ module Make:
       oldSelf: self('state, 'action),
       newSelf: self('state, 'action)
     };
+    type handedOffInstance('state, 'action, 'elementType);
     type componentSpec('state, 'initialState, 'action, 'elementType) = {
       debugName: string,
       elementType: elementType('elementType),
@@ -152,7 +82,7 @@ module Make:
       initialState: unit => 'initialState,
       reducer: ('action, 'state) => update('state, 'action),
       printState: 'state => string /* for internal debugging */,
-      handedOffInstance: ref(option(instance('state, 'action, 'elementType))) /* Used to avoid Obj.magic in update */,
+      handedOffInstance: handedOffInstance('state, 'action, 'elementType),
       key: Key.t
     };
     type component('state, 'action, 'elementType) =
@@ -185,13 +115,14 @@ module Make:
 
       /*** Type of a react element after rendering  */
       type t;
+      type topLevelUpdate;
       let listToRenderedElement: list(t) => t;
 
       /*** Render one element by creating new instances. */
       let render: reactElement => t;
 
       /*** Update a rendered element when a new react element is received. */
-      let update: (t, reactElement) => (t, UpdateLog.t);
+      let update: (t, reactElement) => (t, option(topLevelUpdate));
 
       /*** Flush pending state updates (and possibly add new ones). */
       let flushPendingUpdates: t => (t, UpdateLog.t);
@@ -204,15 +135,12 @@ module Make:
      */
     module OutputTree: {
       type t;
-      let mountForest: t => unit;
       let fromRenderedElement:
         (Implementation.hostView, RenderedElement.t) => t;
-      let applyUpdateLog: (UpdateLog.t, t, Implementation.hostView) => t;
-    };
-    module ReactDOMRe: {
-      type reactDOMProps;
-      let createElement:
-        (string, ~props: reactDOMProps=?, array(reactElement)) => reactElement;
+      let mountForest:
+        (~forest: t, ~nearestParentView: Implementation.hostView) => unit;
+      let applyUpdateLog: (t, UpdateLog.t) => unit;
+      let traverseHostViewTree: (Implementation.hostView => unit, t) => unit;
     };
 
     /***
@@ -232,16 +160,5 @@ module Make:
 
       /*** Perform an action on the subscribed component. */
       let act: (t('action), ~action: 'action) => unit;
-    };
-    module LayoutTest: {
-      let make:
-        (
-          ~root: Implementation.hostView,
-          ~outputTree: OutputTree.t,
-          ~width: int,
-          ~height: int
-        ) =>
-        Layout.t;
-      let performLayout: Layout.t => unit;
     };
   };

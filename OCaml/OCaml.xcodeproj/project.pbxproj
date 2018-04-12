@@ -13,8 +13,8 @@
 		C9445F181FCAF17400280399 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C9445F171FCAF17400280399 /* Assets.xcassets */; };
 		C9445F1B1FCAF17400280399 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C9445F191FCAF17400280399 /* LaunchScreen.storyboard */; };
 		C9445F1E1FCAF17400280399 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C9445F1D1FCAF17400280399 /* main.m */; };
-		C9445F2E1FCAF90900280399 /* libasmrun.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C9445F2D1FCAF90200280399 /* libasmrun.a */; };
-		C9C25B651FFBA2D60093E2F7 /* react_ios.complete.o in Frameworks */ = {isa = PBXBuildFile; fileRef = C9C25B621FFB68560093E2F7 /* react_ios.complete.o */; };
+		C971A991207AD0DA007D7CB1 /* libasmrun.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C9445F2D1FCAF90200280399 /* libasmrun.a */; };
+		C971A99A207B3702007D7CB1 /* react_ios.o in Frameworks */ = {isa = PBXBuildFile; fileRef = C971A998207B34E7007D7CB1 /* react_ios.o */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +29,17 @@
 		C9445F1C1FCAF17400280399 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C9445F1D1FCAF17400280399 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		C9445F2D1FCAF90200280399 /* libasmrun.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libasmrun.a; path = "../../../../../../.opam/4.04.0_ios/ios-sysroot/lib/ocaml/libasmrun.a"; sourceTree = "<group>"; };
+		C971A978207AB9B0007D7CB1 /* react_ios.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = react_ios.o; path = ../_build/default.ios/src/bin/react_ios.o; sourceTree = "<group>"; };
+		C971A97A207AB9C4007D7CB1 /* flex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = flex.a; path = ../_build/default.ios/src/flex/flex.a; sourceTree = "<group>"; };
+		C971A97C207AB9C9007D7CB1 /* r2n2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = r2n2.a; path = ../_build/default.ios/src/lib/r2n2.a; sourceTree = "<group>"; };
+		C971A980207ABF1A007D7CB1 /* libasmrun.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libasmrun.a; path = ../../../../../.opam/4.04.0_ios/lib/ocaml/libasmrun.a; sourceTree = "<group>"; };
+		C971A982207ABF56007D7CB1 /* stdlib.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = stdlib.a; path = ../../../../../.opam/4.04.0_ios/lib/ocaml/stdlib.a; sourceTree = "<group>"; };
+		C971A985207ABFA4007D7CB1 /* unix.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = unix.a; path = ../../../../../.opam/4.04.0_ios/lib/ocaml/unix.a; sourceTree = "<group>"; };
+		C971A987207ABFB6007D7CB1 /* libunix.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libunix.a; path = ../../../../../.opam/4.04.0_ios/lib/ocaml/libunix.a; sourceTree = "<group>"; };
+		C971A989207ABFD3007D7CB1 /* ocamlcommon.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = ocamlcommon.a; path = "../../../../../.opam/4.04.0_ios/lib/ocaml/compiler-libs/ocamlcommon.a"; sourceTree = "<group>"; };
+		C971A98E207AC3A9007D7CB1 /* main.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = main.o; path = "../../../../../.opam/4.04.0_ios/lib/ocaml/compiler-libs/main.o"; sourceTree = "<group>"; };
+		C971A992207AD10E007D7CB1 /* stdlib.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = stdlib.a; path = "../../../../../.opam/4.04.0_ios/ios-sysroot/lib/ocaml/stdlib.a"; sourceTree = "<group>"; };
+		C971A998207B34E7007D7CB1 /* react_ios.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = react_ios.o; path = ../react_ios.o; sourceTree = "<group>"; };
 		C9C25B5D1FFAE98F0093E2F7 /* react_ios.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = react_ios.a; path = ../_build/default.ios/src/react_ios.a; sourceTree = "<group>"; };
 		C9C25B601FFAEA720093E2F7 /* react_ios.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = react_ios.o; path = ../_build/default.ios/src/react_ios.o; sourceTree = "<group>"; };
 		C9C25B621FFB68560093E2F7 /* react_ios.complete.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = react_ios.complete.o; path = ../_build/default.ios/src/react_ios.complete.o; sourceTree = "<group>"; };
@@ -39,8 +50,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C9445F2E1FCAF90900280399 /* libasmrun.a in Frameworks */,
-				C9C25B651FFBA2D60093E2F7 /* react_ios.complete.o in Frameworks */,
+				C971A991207AD0DA007D7CB1 /* libasmrun.a in Frameworks */,
+				C971A99A207B3702007D7CB1 /* react_ios.o in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +95,17 @@
 		C9C25B5C1FFAE98F0093E2F7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C971A998207B34E7007D7CB1 /* react_ios.o */,
+				C971A992207AD10E007D7CB1 /* stdlib.a */,
+				C971A98E207AC3A9007D7CB1 /* main.o */,
+				C971A989207ABFD3007D7CB1 /* ocamlcommon.a */,
+				C971A987207ABFB6007D7CB1 /* libunix.a */,
+				C971A985207ABFA4007D7CB1 /* unix.a */,
+				C971A982207ABF56007D7CB1 /* stdlib.a */,
+				C971A980207ABF1A007D7CB1 /* libasmrun.a */,
+				C971A97C207AB9C9007D7CB1 /* r2n2.a */,
+				C971A97A207AB9C4007D7CB1 /* flex.a */,
+				C971A978207AB9B0007D7CB1 /* react_ios.o */,
 				C9C25B621FFB68560093E2F7 /* react_ios.complete.o */,
 				C9C25B601FFAEA720093E2F7 /* react_ios.o */,
 				C9C25B5D1FFAE98F0093E2F7 /* react_ios.a */,

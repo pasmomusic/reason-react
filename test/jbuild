@@ -1,8 +1,9 @@
 (jbuild_version 1)
 
-(executables
- ((libraries (alcotest react_ios))
-  (names (test))))
+(executable
+ ((name test)
+  (libraries (alcotest r2n2))
+  (preprocess (pps (ppx_deriving.std)))))
 
 (alias
  ((name runtest)
