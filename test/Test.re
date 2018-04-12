@@ -1,5 +1,24 @@
 open Assert;
 
+module Option = {
+  let withDefault: 'a .('a, option('a)) => 'a =
+    x =>
+      fun
+      | Some(value) => value
+      | None => x;
+  let map: 'a 'b .('a => 'b, option('a)) => option('b) =
+    f =>
+      fun
+      | Some(value) => Some(f(value))
+      | None => None;
+};
+
+let getUpdateLog = actual =>
+  Option.(
+    map(x => x.ReasonReact.RenderedElement.updateLog, snd(actual))
+    |> withDefault(ref([]))
+  );
+
 let suite =
   Components.[
     (
@@ -8,8 +27,7 @@ let suite =
       () => {
         open TestRenderer;
         ReasonReact.GlobalState.reset();
-        let component = BoxWrapper.make();
-        let rendered = render(ReasonReact.element(component));
+        let rendered = render(<BoxWrapper />);
         let expected =
           TestComponents.[
             <BoxWrapper id=1>
@@ -17,14 +35,11 @@ let suite =
             </BoxWrapper>
           ];
         assertElement(expected, rendered);
-        let newView =
+        let root =
           ReasonReact.Implementation.{name: "root", id: (-1), element: View};
         let forest =
-          ReasonReact.OutputTree.fromRenderedElement(newView, rendered);
-        ReasonReact.OutputTree.mountForest(
-          ~forest,
-          ~nearestParentView=newView
-        );
+          ReasonReact.OutputTree.fromRenderedElement(root, rendered);
+        ReasonReact.OutputTree.mountForest(~forest, ~nearestParentView=root);
         let expectedDiv =
           ReasonReact.Implementation.{name: "Div", id: 2, element: View};
         let expectedBox =
@@ -33,29 +48,12 @@ let suite =
             id: 3,
             element: Text("ImABox")
           };
-        let expectedRender =
-          ReasonReact.RenderLog.[
-            GetInstance(3),
-            MemoizeInstance(3, expectedBox),
-            GetInstance(2),
-            MemoizeInstance(2, expectedDiv),
-            AddSubview(expectedDiv, expectedBox),
-            AddSubview(newView, expectedDiv)
-          ];
-        assertRenderLog(~label="First render log matches", expectedRender);
-      }
-    ),
-    (
-      "Top level update",
-      `Quick,
-      () => {
-        open TestRenderer;
-        ReasonReact.GlobalState.reset();
         let actual =
           ReasonReact.RenderedElement.update(
-            ReasonReact.RenderedElement.render(<BoxWrapper />),
+            rendered,
             <BoxWrapper twoBoxes=true />
           );
+        ReasonReact.OutputTree.applyUpdateLog(forest, getUpdateLog(actual));
         let twoBoxes =
           TestComponents.(
             <Div id=2>
@@ -94,7 +92,35 @@ let suite =
               ]
           })
         );
-        assertUpdate(expected, actual);
+        assertUpdate(~label="Top level update", expected, actual);
+        let expectedRender =
+          ReasonReact.RenderLog.[
+            GetInstance(3),
+            CreateInstance(expectedBox),
+            UpdateInstance("ImABox", expectedBox),
+            MemoizeInstance(3, expectedBox),
+            GetInstance(2),
+            CreateInstance(expectedDiv),
+            UpdateInstance("", expectedDiv),
+            MemoizeInstance(2, expectedDiv),
+            AddSubview(expectedDiv, expectedBox),
+            AddSubview(root, expectedDiv),
+            /** Update **/
+            /** First remove from parent so that it can be reused **/
+            RemoveFromParent(expectedDiv, expectedBox),
+            FreeInstance(3),
+            GetInstance(4),
+            CreateInstance(expectedBox),
+            UpdateInstance("ImABox", {...expectedBox, id: 4}),
+            MemoizeInstance(4, {...expectedBox, id: 4}),
+            GetInstance(5),
+            CreateInstance(expectedBox),
+            UpdateInstance("ImABox", {...expectedBox, id: 5}),
+            MemoizeInstance(4, {...expectedBox, id: 5}),
+            AddSubview(expectedDiv, {...expectedBox, id: 5}),
+            AddSubview(expectedDiv, {...expectedBox, id: 4})
+          ];
+        assertRenderLog(~label="First render log matches", expectedRender);
       }
     ),
     (
@@ -106,6 +132,11 @@ let suite =
           ReasonReact.RenderedElement.render(
             <ChangeCounter label="defaultText" />
           );
+        let root =
+          ReasonReact.Implementation.{name: "root", id: (-1), element: View};
+        let forest =
+          ReasonReact.OutputTree.fromRenderedElement(root, rendered0);
+        ReasonReact.OutputTree.mountForest(~forest, ~nearestParentView=root);
         assertElement(
           [
             TestComponents.(
@@ -119,6 +150,7 @@ let suite =
             rendered0,
             <ChangeCounter label="defaultText" />
           );
+        ReasonReact.OutputTree.applyUpdateLog(forest, getUpdateLog(actual));
         assertUpdate(
           (
             [
@@ -135,6 +167,7 @@ let suite =
             rendered1,
             <ChangeCounter label="updatedText" />
           );
+        ReasonReact.OutputTree.applyUpdateLog(forest, getUpdateLog(actual2));
         assertUpdate(
           TestComponents.(
             [<ChangeCounter id=1 label="updatedText" counter=11 />],
@@ -156,8 +189,9 @@ let suite =
           ),
           actual2
         );
-        let (rendered2f, _) as actual2f =
+        let (rendered2f, updateLog) as actual2f =
           ReasonReact.RenderedElement.flushPendingUpdates(rendered2);
+        ReasonReact.OutputTree.applyUpdateLog(forest, updateLog);
         assertFlushUpdate(
           TestComponents.(
             [<ChangeCounter id=1 label="updatedText" counter=2011 />],
@@ -174,16 +208,18 @@ let suite =
           ),
           actual2f
         );
-        let (rendered2f_mem, _) =
+        let (rendered2f_mem, updateLog) =
           ReasonReact.RenderedElement.flushPendingUpdates(rendered2f);
+        ReasonReact.OutputTree.applyUpdateLog(forest, updateLog);
         check(
           Alcotest.bool,
           "it is memoized",
           rendered2f_mem === rendered2f,
           true
         );
-        let (rendered2f_mem, _) =
+        let (rendered2f_mem, updateLog) =
           ReasonReact.RenderedElement.flushPendingUpdates(rendered2f_mem);
+        ReasonReact.OutputTree.applyUpdateLog(forest, updateLog);
         check(
           Alcotest.bool,
           "it is memoized",
@@ -195,6 +231,7 @@ let suite =
             rendered2f_mem,
             <ButtonWrapperWrapper wrappedText="updatedText" />
           );
+        ReasonReact.OutputTree.applyUpdateLog(forest, getUpdateLog(actual3));
         assertUpdate(
           ~label="Updating components: ChangeCounter to ButtonWrapperWrapper",
           TestComponents.(
@@ -233,6 +270,7 @@ let suite =
             rendered3,
             <ButtonWrapperWrapper wrappedText="updatedTextmodified" />
           );
+        ReasonReact.OutputTree.applyUpdateLog(forest, getUpdateLog(actual4));
         assertUpdate(
           ~label="Updating text in the button wrapper",
           TestComponents.(
@@ -322,6 +360,52 @@ let suite =
             }
           )
         );
+        let div = {
+          ReasonReact.Implementation.name: "Div",
+          id: 0,
+          element: View
+        };
+        let text = (txt, id) => {
+          ReasonReact.Implementation.name: "Text",
+          id,
+          element: Text(txt)
+        };
+        let expectedRender =
+          ReasonReact.RenderLog.
+            /* No render until there's a change from ChangeCounter
+             * into ButtonWrapperWrapper
+             */
+            [
+              GetInstance(8),
+              CreateInstance({name: "Div", id: 0, element: View}),
+              UpdateInstance("", {...div, id: 8}),
+              MemoizeInstance(8, {...div, id: 8}),
+              GetInstance(5),
+              CreateInstance(text("wrappedText:updatedText", 5)),
+              UpdateInstance(
+                "wrappedText:updatedText",
+                text("wrappedText:updatedText", 5)
+              ),
+              MemoizeInstance(5, text("wrappedText:updatedText", 5)),
+              GetInstance(4),
+              CreateInstance(text("buttonWrapperWrapperState", 4)),
+              UpdateInstance("", text("buttonWrapperWrapperState", 4)),
+              MemoizeInstance(4, text("buttonWrapperWrapperState", 4)),
+              GetInstance(3),
+              CreateInstance(div),
+              UpdateInstance("", {...div, id: 3}),
+              MemoizeInstance(3, {...div, id: 3}),
+              AddSubview({...div, id: 3}, {...div, id: 8}),
+              AddSubview({...div, id: 3}, text("", 5)),
+              AddSubview({...div, id: 3}, text("", 3)),
+              AddSubview(root, {...div, id: 3}),
+              /* After last text update */
+              UpdateInstance(
+                "wrappedText:updatedTextmodified",
+                text("wrappedText:updatedText", 5)
+              )
+            ];
+        assertRenderLog(~label="First render log matches", expectedRender);
       }
     ),
     (

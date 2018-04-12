@@ -1,29 +1,29 @@
 open R2n2;
 
 module Implementation = {
-  [@deriving (show, eq, ord)]
+  [@deriving (show({with_path: false}), eq, ord)]
   type hostElement =
     | Text(string)
     | View;
-  [@deriving (show, eq, ord)]
+  [@deriving (show({with_path: false}), eq, ord)]
   type hostView = {
     name: string,
     element: hostElement,
     mutable id: int
   };
   module RenderLog = {
-    [@deriving (show, eq, ord)]
+    [@deriving (show({with_path: false}), eq, ord)]
     type payload = {
       component: string,
       state: string
     };
-    [@deriving (show, eq, ord)]
+    [@deriving (show({with_path: false}), eq, ord)]
     type stateUpdatePayload = {
       component: string,
       oldState: string,
       newState: string
     };
-    [@deriving (show, eq, ord)]
+    [@deriving (show({with_path: false}), eq, ord)]
     type entry =
       | GetInstance(int)
       | CreateInstance(hostView)
@@ -34,7 +34,7 @@ module Implementation = {
       | ComponentDidMount(payload)
       | ComponentDidUpdate(stateUpdatePayload)
       | ComponentWillUnmount(payload)
-      | UpdateInstance(payload, hostView);
+      | UpdateInstance(string, hostView);
     [@deriving (show, eq, ord)]
     type t = list(entry);
     let global: ref(t) = ref([]);
